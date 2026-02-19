@@ -106,17 +106,15 @@ AuthMech=11;Auth_Flow=1;Auth_Client_ID=<id>;Auth_Client_Secret=<secret>;
 
 ## Docker
 
-### 1. Create your `.env` file
+### 1. Set your connection string
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and fill in your real values (it is git-ignored):
+Edit `.env` and fill in your real values:
 
 ```
 DATABRICKS_CONNECTION_STRING=Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;
 ```
+
+> **Do not commit a real token.** `.env` contains only placeholders in version control.
 
 ### 2. Build and run
 
