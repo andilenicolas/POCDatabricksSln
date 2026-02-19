@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DatabricksPoc</RootNamespace>
+    <NoWarn>CA1416</NoWarn>  <!-- Simba ODBC driver is Windows-only by design -->
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <UserSecretsId>54215cb0-961b-4746-ac5b-223c5e223f3d</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      linq2db core — ITable<T>, DataConnection, fluent mapping, LINQ translation.
+      No EF Core packages needed. Linq2DB is a standalone LINQ-to-SQL library.
+    -->
+    <PackageReference Include="linq2db"        Version="5.4.1" />
+
+    <!--
+      ASP.NET Core integration — AddLinqToDBContext<T>() DI extension
+      and UseDefaultLogging() for SQL tracing via ILogger.
+    -->
+    <PackageReference Include="linq2db.AspNet" Version="5.4.1" />
+
+    <!--
+      System.Data.Odbc — physical ODBC transport.
+      DatabricksOdbcDataProvider creates OdbcConnection instances directly.
+      Opens HTTPS connection to Databricks SQL Warehouse via Simba driver.
+      No JET, no file paths.
+    -->
+    <PackageReference Include="System.Data.Odbc" Version="9.0.4" />
+
+    <!--
+      Swashbuckle — Swagger/OpenAPI UI. v10.x targets .NET 10 / ASP.NET Core 10.
+    -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
+  </ItemGroup>
+
+</Project>
+
+<!--
+======================================================================================
+KNOWN LIMITATIONS with EF Core + ODBC on Databricks
+======================================================================================
+
+LINQ operations that translate well (safe to use):
+  OK  Where, Select, OrderBy, OrderByDescending
+  OK  FirstOrDefault, SingleOrDefault, Any, Count, Sum, Min, Max
+  OK  Skip + Take (pagination)
+  OK  Include / navigation property joins (translated to LEFT JOIN)
+  OK  GroupBy with simple aggregations
+  OK  String.Contains -> LIKE '%term%'
+  OK  Expression<> sub-projections via LINQKit .Invoke() (expanded before SQL translation)
+
+LINQ operations that may fail or behave unexpectedly:
+  !!  Complex GroupBy with multiple aggregations - test each case
+  !!  String methods beyond Contains (StartsWith/EndsWith usually OK)
+  !!  DateTimeOffset operations - use DateTime instead
+  !!  Collection sub-selects inside projections e.g. p.Tags.Select(...).ToArray()
+      - use a second targeted query and merge in-memory (see ProductRepository)
+  !!  Math functions - provider-dependent
+
+What to do when LINQ hits a wall:
+  DO:   Simplify the query, break into two queries and join in C#
+  DO:   Use a second targeted query for collection properties (Tags pattern)
+  DONT: Fall back to FromSqlRaw (excluded by requirement)
+  DONT: Use .AsEnumerable() early - defeats column projection
+
+Commercial alternative:
+  CData.Databricks.EntityFrameworkCore8 - purpose-built Databricks EF Core provider.
+  If Jet query translation fidelity becomes a concern, swap UseJetOdbc() for the
+  CData equivalent and remove the Jet + System.Data.Odbc packages.
+
+Databricks-specific notes:
+  - OFFSET/FETCH for pagination: supported in SQL Warehouse (DBR 8+)
+  - Case sensitivity: Databricks is case-insensitive for column names by default
+  - 3-part Unity Catalog names: configure via schema in model builder (done in DbContext)
+  - Cold start: SQL Warehouse (non-serverless) can take 2-5 min to warm up
+======================================================================================
+-->

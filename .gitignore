@@ -1,0 +1,28 @@
+# .NET build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# ASP.NET Core secrets / environment overrides with real credentials
+# (appsettings.Development.json is committed but should NOT contain real tokens)
+# Use: dotnet user-secrets set "ConnectionStrings:Databricks" "..."
+# to store real credentials locally without committing them.
+
+# Rider / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# OS
+Thumbs.db
+.DS_Store
