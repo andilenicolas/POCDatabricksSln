@@ -10,6 +10,20 @@
     <UserSecretsId>54215cb0-961b-4746-ac5b-223c5e223f3d</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Exclude sub-projects that live inside the repo root folder.
+       All four item types must be excluded to prevent the SDK glob from pulling
+       bin/obj/content of the test project into the web project's build, which
+       causes MSB3030 recursive-path errors when dotnet build runs the solution. -->
+  <ItemGroup>
+    <Compile             Remove="Databricks.Integration.Tests\**" />
+    <Content             Remove="Databricks.Integration.Tests\**" />
+    <None                Remove="Databricks.Integration.Tests\**" />
+    <EmbeddedResource    Remove="Databricks.Integration.Tests\**" />
+    <Compile             Remove="files\**" />
+    <Content             Remove="files\**" />
+    <None                Remove="files\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <!--
       linq2db core — ITable<T>, DataConnection, fluent mapping, LINQ translation.
