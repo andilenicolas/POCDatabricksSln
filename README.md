@@ -24,12 +24,12 @@ src/
 
 ### Packages
 
-| Package | Purpose |
-|---|---|
-| `linq2db 5.4.1` | ORM / query translation |
-| `linq2db.AspNet 5.4.1` | DI integration |
-| `System.Data.Odbc 9.0.4` | ODBC transport |
-| `Swashbuckle.AspNetCore 10.1.4` | Swagger UI |
+| Package                         | Purpose                 |
+| ------------------------------- | ----------------------- |
+| `linq2db 5.4.1`                 | ORM / query translation |
+| `linq2db.AspNet 5.4.1`          | DI integration          |
+| `System.Data.Odbc 9.0.4`        | ODBC transport          |
+| `Swashbuckle.AspNetCore 10.1.4` | Swagger UI              |
 
 ### Key design decisions
 
@@ -44,6 +44,7 @@ src/
 ## Prerequisites
 
 ### Databricks
+
 1. A Databricks workspace (Community Edition works for testing)
 2. A **SQL Warehouse** — note the `Host` and `HTTPPath` from its **Connection Details** tab
 3. A **Personal Access Token** — User Settings → Developer → Access Tokens → Generate
@@ -103,11 +104,62 @@ AuthMech=11;Auth_Flow=1;Auth_Client_ID=<id>;Auth_Client_Secret=<secret>;
 
 ---
 
+## Docker
+
+### Build the image
+
+```bash
+docker build -t databricks-poc .
+```
+
+The `base` stage installs **unixODBC** and downloads the **Simba Spark ODBC Driver** automatically during `docker build` (requires internet access from the build host).  
+To use a newer driver release, override the build arg:
+
+```bash
+docker build --build-arg SIMBA_VERSION=2.8.3.1005 -t databricks-poc .
+```
+
+### Run the container
+
+Pass the connection string as an environment variable — never bake a token into the image:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e "ConnectionStrings__Databricks=Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;" \
+  databricks-poc
+```
+
+Swagger UI: `http://localhost:8080/`
+
+### Kubernetes
+
+Create the secret once per cluster/namespace:
+
+```bash
+kubectl create secret generic databricks-secret \
+  --from-literal=ConnectionStrings__Databricks="Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;"
+```
+
+Reference it in the deployment manifest:
+
+```yaml
+env:
+  - name: ConnectionStrings__Databricks
+    valueFrom:
+      secretKeyRef:
+        name: databricks-secret
+        key: ConnectionStrings__Databricks
+```
+
+The connection string can also use OAuth2 (`AuthMech=11`) for production workloads — see the **Service principal / OAuth2** section above.
+
+---
+
 ## Endpoints
 
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/products/{id}` | Single product with tags |
-| `GET` | `/api/products/category/{slug}` | Products by category |
-| `GET` | `/api/products/search` | Paginated search with filters |
-| `GET` | `/api/products/stock/by-category` | Stock aggregated by category |
+| Method | Route                             | Description                   |
+| ------ | --------------------------------- | ----------------------------- |
+| `GET`  | `/api/products/{id}`              | Single product with tags      |
+| `GET`  | `/api/products/category/{slug}`   | Products by category          |
+| `GET`  | `/api/products/search`            | Paginated search with filters |
+| `GET`  | `/api/products/stock/by-category` | Stock aggregated by category  |
