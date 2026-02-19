@@ -7,17 +7,17 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 # Update SIMBA_VERSION if a newer driver release is required
 ARG SIMBA_VERSION=2.8.3.1005
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unixodbc curl \
-    && curl -fSL \
-       "https://databricks-bi-artifacts.s3.us-east-2.amazonaws.com/simbaspark-drivers/odbc/${SIMBA_VERSION}/simbaspark_${SIMBA_VERSION}-2_amd64.deb" \
-       -o /tmp/simbaspark.deb \
-    && dpkg -i /tmp/simbaspark.deb \
-    && rm /tmp/simbaspark.deb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    # Register the driver so unixODBC can find it by name
-    && printf '[Simba Spark ODBC Driver]\nDescription=Simba Spark ODBC Driver\nDriver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so\n' \
-       >> /etc/odbcinst.ini
+  unixodbc curl \
+  && curl -fSL \
+  "https://databricks-bi-artifacts.s3.us-east-2.amazonaws.com/simbaspark-drivers/odbc/${SIMBA_VERSION}/simbaspark_${SIMBA_VERSION}-2_amd64.deb" \
+  -o /tmp/simbaspark.deb \
+  && dpkg -i /tmp/simbaspark.deb \
+  && rm /tmp/simbaspark.deb \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  # Register the driver so unixODBC can find it by name
+  && printf '[Simba Spark ODBC Driver]\nDescription=Simba Spark ODBC Driver\nDriver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so\n' \
+  >> /etc/odbcinst.ini
 
 USER $APP_UID
 WORKDIR /app
