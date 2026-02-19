@@ -1,0 +1,5 @@
+# Place the Simba Spark ODBC Linux .deb here before running docker compose up --build.
+# Download from: https://www.databricks.com/spark/odbc-drivers-download
+# Expected filename pattern: simbaspark_X.X.X.XXXX-2_amd64.deb
+#
+# This file is git-ignored — only needs to be present on the build machine.

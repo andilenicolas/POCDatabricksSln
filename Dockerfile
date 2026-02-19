@@ -3,14 +3,13 @@
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 
-# Install unixODBC runtime and the Simba Spark ODBC Driver
-# Update SIMBA_VERSION if a newer driver release is required
-ARG SIMBA_VERSION=2.8.3.1005
+# Install unixODBC and the Simba Spark ODBC Driver.
+# Place the driver .deb in the drivers/ folder before building.
+# Download from: https://www.databricks.com/spark/odbc-drivers-download
+# (Linux .deb — e.g. simbaspark_2.8.3.1005-2_amd64.deb)
+COPY drivers/*.deb /tmp/simbaspark.deb
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  unixodbc curl \
-  && curl -fSL \
-  "https://databricks-bi-artifacts.s3.us-east-2.amazonaws.com/simbaspark-drivers/odbc/${SIMBA_VERSION}/simbaspark_${SIMBA_VERSION}-2_amd64.deb" \
-  -o /tmp/simbaspark.deb \
+  unixodbc libsasl2-modules-gssapi-mit \
   && dpkg -i /tmp/simbaspark.deb \
   && rm /tmp/simbaspark.deb \
   && apt-get clean \

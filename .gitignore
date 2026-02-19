@@ -27,4 +27,10 @@ obj/
 Thumbs.db
 .DS_Store
 
+# Docker local secrets
 .env
+
+# Simba ODBC driver binary (download manually, place in drivers/ before building)
+drivers/*.deb
+drivers/*.rpm
+drivers/*.zip

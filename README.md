@@ -106,7 +106,19 @@ AuthMech=11;Auth_Flow=1;Auth_Client_ID=<id>;Auth_Client_Secret=<secret>;
 
 ## Docker
 
-### 1. Set your connection string
+### 1. Download the Simba Spark ODBC Driver
+
+Download the **Linux .deb** package from https://www.databricks.com/spark/odbc-drivers-download  
+(e.g. `simbaspark_2.9.4.1013-2_amd64.deb`) and place it in the `drivers/` folder:
+
+```
+drivers/
+  simbaspark_2.8.3.1005-2_amd64.deb   ← drop file here
+```
+
+The binary is git-ignored — it only needs to be present on the build machine.
+
+### 2. Set your connection string
 
 Edit `.env` and fill in your real values:
 
@@ -114,9 +126,7 @@ Edit `.env` and fill in your real values:
 DATABRICKS_CONNECTION_STRING=Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;
 ```
 
-> **Do not commit a real token.** `.env` contains only placeholders in version control.
-
-### 2. Build and run
+### 3. Build and run
 
 ```bash
 docker compose up --build
@@ -130,9 +140,6 @@ Stop with `Ctrl+C`, or in the background:
 docker compose up --build -d
 docker compose down
 ```
-
-> The `base` stage downloads and installs the **Simba Spark ODBC Driver** automatically.  
-> To pin a different driver version, edit `SIMBA_VERSION` in `docker-compose.yml`.
 
 ### Kubernetes
 
