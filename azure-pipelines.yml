@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# azure-pipelines.yml
+#
+# Relevant stages only — plug these into your existing pipeline.
+# Assumes:
+#   - The .deb is stored in Azure Blob Storage (private container)
+#   - A service connection "AzureServiceConnection" exists in Azure DevOps
+#   - The storage account and container names are in pipeline variables
+# ─────────────────────────────────────────────────────────────────────────────
+
+variables:
+  # Store these in Azure DevOps pipeline variables (not in source)
+  # DRIVER_STORAGE_ACCOUNT : e.g. mystorageaccount
+  # DRIVER_CONTAINER       : e.g. odbc-drivers
+  DRIVER_FILENAME: simbaspark_2.9.4.1004-2_amd64.deb
+  DRIVER_SHA256: 9d97f7f76a94034e5ff64acdd82d6a90f339a6fcd26cf124bac9c866796cb42d
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildAndPush
+        pool:
+          vmImage: ubuntu-latest
+
+        steps:
+          # ── Step 1: Download Simba driver from Azure Blob ─────────────────
+          # The .deb lives in a private Blob container — never in the repo.
+          # AzureCLI task authenticates via service connection (no secrets in yaml).
+          - task: AzureCLI@2
+            displayName: "Download Simba ODBC driver from Azure Blob"
+            inputs:
+              azureSubscription: "AzureServiceConnection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                mkdir -p drivers
+                az storage blob download \
+                  --account-name $(DRIVER_STORAGE_ACCOUNT) \
+                  --container-name $(DRIVER_CONTAINER) \
+                  --name $(DRIVER_FILENAME) \
+                  --file drivers/$(DRIVER_FILENAME) \
+                  --auth-mode login
+
+          # ── Step 2: Verify SHA-256 checksum ──────────────────────────────
+          # Fail the pipeline immediately if the downloaded file doesn't match
+          # the pinned hash. Prevents a corrupted or tampered driver from being
+          # baked silently into a production image.
+          - bash: |
+              echo "$(DRIVER_SHA256)  drivers/$(DRIVER_FILENAME)" | sha256sum --check
+            displayName: "Verify Simba driver SHA-256"
+
+          # ── Step 3: docker build ──────────────────────────────────────────
+          # drivers/ folder now contains the verified .deb.
+          # Dockerfile COPY drivers/*.deb picks it up — no Dockerfile changes needed.
+          - task: Docker@2
+            displayName: "Build Docker image"
+            inputs:
+              command: build
+              dockerfile: Dockerfile
+              tags: |
+                $(Build.BuildId)
+                latest
+
+          # ── Step 4: clean up driver from workspace ────────────────────────
+          # Belt-and-braces: remove the .deb from the agent workspace after build.
+          # The pipeline agent is ephemeral anyway, but this makes intent explicit.
+          - bash: rm -f drivers/$(DRIVER_FILENAME)
+            displayName: "Clean up driver from workspace"
+            condition: always()
