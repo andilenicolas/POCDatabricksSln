@@ -12,6 +12,9 @@ obj/
 # Use: dotnet user-secrets set "ConnectionStrings:Databricks" "..."
 # to store real credentials locally without committing them.
 
+# Docker local secrets
+.env
+
 # Rider / JetBrains
 .idea/
 

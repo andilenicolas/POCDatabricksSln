@@ -106,30 +106,35 @@ AuthMech=11;Auth_Flow=1;Auth_Client_ID=<id>;Auth_Client_Secret=<secret>;
 
 ## Docker
 
-### Build the image
+### 1. Create your `.env` file
 
 ```bash
-docker build -t databricks-poc .
+cp .env.example .env
 ```
 
-The `base` stage installs **unixODBC** and downloads the **Simba Spark ODBC Driver** automatically during `docker build` (requires internet access from the build host).  
-To use a newer driver release, override the build arg:
+Edit `.env` and fill in your real values (it is git-ignored):
 
-```bash
-docker build --build-arg SIMBA_VERSION=2.8.3.1005 -t databricks-poc .
+```
+DATABRICKS_CONNECTION_STRING=Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;
 ```
 
-### Run the container
-
-Pass the connection string as an environment variable — never bake a token into the image:
+### 2. Build and run
 
 ```bash
-docker run --rm -p 8080:8080 \
-  -e "ConnectionStrings__Databricks=Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;" \
-  databricks-poc
+docker compose up --build
 ```
 
 Swagger UI: `http://localhost:8080/`
+
+Stop with `Ctrl+C`, or in the background:
+
+```bash
+docker compose up --build -d
+docker compose down
+```
+
+> The `base` stage downloads and installs the **Simba Spark ODBC Driver** automatically.  
+> To pin a different driver version, edit `SIMBA_VERSION` in `docker-compose.yml`.
 
 ### Kubernetes
 

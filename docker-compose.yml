@@ -1,0 +1,14 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SIMBA_VERSION: "2.8.3.1005"  # override with --build-arg if needed
+    image: databricks-poc
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Databricks=${DATABRICKS_CONNECTION_STRING}
+    restart: unless-stopped
