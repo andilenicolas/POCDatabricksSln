@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        SIMBA_VERSION: "2.8.3.1005"  # override with --build-arg if needed
     image: databricks-poc
     container_name: databricks-poc
     ports:
