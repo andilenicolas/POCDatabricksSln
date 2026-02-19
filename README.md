@@ -6,15 +6,24 @@ ASP.NET Core Web API demonstrating read-only access to **Databricks SQL Warehous
 
 ```
 HTTP Request
-  → ASP.NET Core Controller
-    → IProductRepository (Repository pattern)
+  → ProductsController
+    → IProductRepository
       → DatabricksDataConnection (linq2db DataConnection)
         → SAP HANA ODBC provider (built-in linq2db)
           → Simba Spark ODBC Driver
             → Databricks SQL Warehouse (HTTPS/443)
 ```
 
-**Key packages**
+```
+src/
+├── Domain/         Entities · Models · IProductRepository
+├── Application/    ProductRepository · Specifications · Projections · Sort
+├── Infrastructure/ DatabricksDataConnection · DatabricksOdbcDataProvider
+└── Api/            ProductsController
+```
+
+### Packages
+
 | Package | Purpose |
 |---|---|
 | `linq2db 5.4.1` | ORM / query translation |
@@ -22,74 +31,49 @@ HTTP Request
 | `System.Data.Odbc 9.0.4` | ODBC transport |
 | `Swashbuckle.AspNetCore 10.1.4` | Swagger UI |
 
-**Patterns used:** Repository, Specification, Expression projection (no LinqKit — linq2db expands expressions natively).
+### Key design decisions
+
+- **Expression trees, not `Func<>`** — projections are `Expression<Func<Product, TDto>>` so linq2db generates a narrow `SELECT` column list, not `SELECT *`
+- **Specification pattern** — each filter condition is a small `Expression<Func<Product, bool>>`; `ProductSpecificationBuilder` combines them with `AndAlso` into one `WHERE` clause
+- **`IQueryable` stays open** — every `.Where()` / `.Select()` / `.OrderBy()` appends to the expression tree; `.ToListAsync()` is always the last call
+- **No tracking** — `DataConnection` does not track by design; appropriate for a read-only API
+- **No migrations** — Databricks manages its own schema via Unity Catalog
 
 ---
 
 ## Prerequisites
 
-### Databricks side
+### Databricks
 1. A Databricks workspace (Community Edition works for testing)
-2. A **SQL Warehouse** — note the `HTTPPath` from its connection details
+2. A **SQL Warehouse** — note the `Host` and `HTTPPath` from its **Connection Details** tab
 3. A **Personal Access Token** — User Settings → Developer → Access Tokens → Generate
-4. Tables in Unity Catalog matching the mapped schema:
-   - `commerce.products`
-   - `commerce.categories`
-   - `commerce.product_tags`
-
----
-
-## Setup — Linux / Docker
-
-The base `appsettings.json` is pre-configured for the Linux Simba driver path:
-
-```
-Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so
-```
-
-Install the driver inside your container/host, then set your token via environment variable or Docker secret — do **not** commit the real token:
-
-```bash
-export ConnectionStrings__Databricks="Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<your-host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<your-http-path>;AuthMech=3;UID=token;PWD=<your-token>;"
-```
+4. Tables in Unity Catalog:
+   - `commerce.products`, `commerce.categories`, `commerce.product_tags`
 
 ---
 
 ## Setup — Windows (local development)
 
-> The `appsettings.Development.json` override kicks in automatically when
-> `ASPNETCORE_ENVIRONMENT=Development` (the default when running from Visual Studio or `dotnet run`).
-
 ### 1. Install the Simba Spark ODBC Driver
 
-1. Go to https://www.databricks.com/spark/odbc-drivers-download
-2. Create/sign in to a Databricks account if prompted
-3. Download **Simba Spark ODBC Driver** — choose the **64-bit Windows** installer
-4. Run the installer (default options are fine)
-5. Verify it registered correctly:
+1. Download the **64-bit Windows** installer from https://www.databricks.com/spark/odbc-drivers-download
+2. Run with default options
+3. Verify registration:
    ```powershell
    Get-OdbcDriver | Where-Object { $_.Name -match "Simba|Spark" } | Select-Object Name, Platform
    ```
-   You should see `Simba Spark ODBC Driver` with Platform `64-bit`.
+   Expected: `Simba Spark ODBC Driver  64-bit`
 
-   Alternatively: **Control Panel → Administrative Tools → ODBC Data Sources (64-bit) → Drivers tab**
+### 2. Store credentials as user secrets
 
-### 2. Store your connection string as a user secret
-
-Never put a real token in `appsettings.Development.json` — use .NET user secrets instead:
+Never commit a real token — use .NET user secrets:
 
 ```powershell
-cd "C:\path\to\DatabricksSln"
 dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:Databricks" "Driver={Simba Spark ODBC Driver};Host=<your-host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<your-http-path>;AuthMech=3;UID=token;PWD=<your-token>;"
+dotnet user-secrets set "ConnectionStrings:Databricks" "Driver={Simba Spark ODBC Driver};Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;"
 ```
 
-Replace:
-- `<your-host>` — e.g. `dbc-ef82b5c7-b72a.cloud.databricks.com`
-- `<your-http-path>` — e.g. `/sql/1.0/warehouses/60a677ebb3f702e6`
-- `<your-token>` — your Databricks PAT starting with `dapi`
-
-ASP.NET Core merges user secrets automatically in Development — no code changes needed.
+ASP.NET Core merges user secrets automatically when `ASPNETCORE_ENVIRONMENT=Development`.
 
 ### 3. Run
 
@@ -98,6 +82,24 @@ dotnet run
 ```
 
 Swagger UI opens at `https://localhost:<port>/`.
+
+---
+
+## Setup — Linux / Docker
+
+`appsettings.json` is pre-configured for the Linux driver path. Set the full connection string via environment variable:
+
+```bash
+export ConnectionStrings__Databricks="Driver=/opt/simba/spark/lib/64/libsparkodbc_sb64.so;Host=<host>;Port=443;SSL=1;ThriftTransport=2;HTTPPath=<http-path>;AuthMech=3;UID=token;PWD=<dapi-token>;"
+```
+
+### Service principal / OAuth2 (production)
+
+Switch `AuthMech=11` and supply client credentials instead of a PAT:
+
+```
+AuthMech=11;Auth_Flow=1;Auth_Client_ID=<id>;Auth_Client_Secret=<secret>;
+```
 
 ---
 
