@@ -7,6 +7,7 @@ public interface IProductRepository
 {
   // ── Simple reads ────────────────────────────────────────────────────────
   Task<ProductDetailDto?> GetByIdAsync(long productId, CancellationToken ct = default);
+  Task<ProductDetailDto?> GetByIdSingleQueryAsync(long productId, CancellationToken ct = default);
   Task<ProductDetailDto?> GetBySkuAsync(string sku, CancellationToken ct = default);
   Task<IReadOnlyList<ProductDetailDto>> GetByCategoryAsync(string categorySlug, CancellationToken ct = default);
 

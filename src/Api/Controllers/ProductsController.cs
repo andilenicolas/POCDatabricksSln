@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DatabricksPoc.Domain.Models;
 using DatabricksPoc.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,24 @@ public class ProductsController(IProductRepository repo) : ControllerBase
     public async Task<ActionResult<ProductDetailDto>> GetById(
         long id, CancellationToken ct)
     {
+        var sw = new Stopwatch();
+        sw.Start();
         var product = await repo.GetByIdAsync(id, ct);
+        sw.Stop();
+        Console.WriteLine($"GetByIdAsync took {sw.ElapsedMilliseconds} ms");
+        return product is null ? NotFound() : Ok(product);
+    }
+
+    // GET /api/products/singleQuery/{id}
+    [HttpGet("singleQuery/{id:long}")]
+    public async Task<ActionResult<ProductDetailDto>> GetByIdSingleQuery(
+        long id, CancellationToken ct)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var product = await repo.GetByIdSingleQueryAsync(id, ct);
+        sw.Stop();
+        Console.WriteLine($"GetByIdSingleQueryAsync took {sw.ElapsedMilliseconds} ms");
         return product is null ? NotFound() : Ok(product);
     }
 

@@ -1,9 +1,9 @@
 using LinqToDB;
-using LinqToDB.AspNet;
-using LinqToDB.AspNet.Logging;
+using LinqToDB.Extensions.Logging;
 using DatabricksPoc.Domain.Repositories;
 using DatabricksPoc.Infrastructure.Context;
 using DatabricksPoc.Application.Repositories;
+using LinqToDB.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +12,8 @@ var connectionString = builder.Configuration.GetConnectionString("Databricks")
 
 builder.Services.AddLinqToDBContext<DatabricksDataConnection>((provider, options) =>
     options
-        .UseConnectionString(ProviderName.SapHanaOdbc, connectionString)
+        .UseProvider(ProviderName.SapHanaOdbc)
+        .UseConnectionString(connectionString)
         .UseDefaultLogging(provider));
 
 // ── 4. Register repository ────────────────────────────────────────────────────

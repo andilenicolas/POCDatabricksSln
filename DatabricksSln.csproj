@@ -15,13 +15,13 @@
        bin/obj/content of the test project into the web project's build, which
        causes MSB3030 recursive-path errors when dotnet build runs the solution. -->
   <ItemGroup>
-    <Compile             Remove="Databricks.Integration.Tests\**" />
-    <Content             Remove="Databricks.Integration.Tests\**" />
-    <None                Remove="Databricks.Integration.Tests\**" />
-    <EmbeddedResource    Remove="Databricks.Integration.Tests\**" />
-    <Compile             Remove="files\**" />
-    <Content             Remove="files\**" />
-    <None                Remove="files\**" />
+    <Compile Remove="Databricks.Integration.Tests\**" />
+    <Content Remove="Databricks.Integration.Tests\**" />
+    <None Remove="Databricks.Integration.Tests\**" />
+    <EmbeddedResource Remove="Databricks.Integration.Tests\**" />
+    <Compile Remove="files\**" />
+    <Content Remove="files\**" />
+    <None Remove="files\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,13 +29,13 @@
       linq2db core — ITable<T>, DataConnection, fluent mapping, LINQ translation.
       No EF Core packages needed. Linq2DB is a standalone LINQ-to-SQL library.
     -->
-    <PackageReference Include="linq2db"        Version="5.4.1" />
+    <PackageReference Include="linq2db" Version="6.1.0" />
+    <PackageReference Include="linq2db.Extensions" Version="6.1.0" />
 
     <!--
       ASP.NET Core integration — AddLinqToDBContext<T>() DI extension
       and UseDefaultLogging() for SQL tracing via ILogger.
     -->
-    <PackageReference Include="linq2db.AspNet" Version="5.4.1" />
 
     <!--
       System.Data.Odbc — physical ODBC transport.
