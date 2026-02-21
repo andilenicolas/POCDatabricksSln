@@ -36,7 +36,6 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
 
     public async Task<ProductDetailDto?> GetByIdAsync(long productId, CancellationToken ct = default)
     {
-        var tt = await db.Products.FirstOrDefaultAsync(ct);
         var dto = await db.Products
             .Where(p => p.ProductId == productId)
             .Select(ProductProjections.ToDetail)
