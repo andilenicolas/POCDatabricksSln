@@ -1,28 +1,27 @@
-using DatabricksPoc.Application.Repositories;
+using LinqToDB;
+using LinqToDB.Extensions.Logging;
 using DatabricksPoc.Domain.Repositories;
 using DatabricksPoc.Infrastructure.Context;
-using DatabricksPoc.Infrastructure.Provider;
-using LinqToDB;
-using LinqToDB.AspNet;
-using LinqToDB.AspNet.Logging;
+using DatabricksPoc.Application.Repositories;
+using LinqToDB.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── 1. Register custom Databricks provider ───────────────────────────────────
-// Must happen before any DataConnection is created.
-// Registers DatabricksOdbcDataProvider under the "Databricks.Odbc" provider name.
-DatabricksOdbcDataProvider.Register();
-
-// ── 2. Read connection string ─────────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("Databricks")
     ?? throw new InvalidOperationException("ConnectionStrings:Databricks is missing.");
 
-// ── 3. Register Linq2DB DataConnection ───────────────────────────────────────
-// Scoped lifetime: one DataConnection per HTTP request (same as EF Core DbContext).
-// UseDefaultLogging wires Linq2DB's SQL tracing into ASP.NET Core ILogger.
 builder.Services.AddLinqToDBContext<DatabricksDataConnection>((provider, options) =>
+    // NOTE:
+    // Databricks is accessed via an ODBC driver, and LinqToDB currently routes all ODBC
+    // connections through the enum value ProviderName.SapHanaOdbc, even when the target
+    // database is not SAP HANA. Although the name is misleading, this is the correct
+    // provider value to use for Databricks over ODBC with LinqToDB.
+    //
+    // If you change this provider, you must also update any tests and other configuration
+    // that depend on Databricks using the ODBC provider, to keep behavior consistent.
     options
-        .UseConnectionString(DatabricksOdbcDataProvider.ProviderName, connectionString)
+        .UseProvider(ProviderName.SapHanaOdbc)
+        .UseConnectionString(connectionString)
         .UseDefaultLogging(provider));
 
 // ── 4. Register repository ────────────────────────────────────────────────────
@@ -46,3 +45,6 @@ app.UseSwaggerUI(c =>
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
+
+// Required for WebApplicationFactory<Program> in integration tests
+public partial class Program { }

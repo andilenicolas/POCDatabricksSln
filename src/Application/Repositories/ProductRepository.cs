@@ -3,7 +3,7 @@ using DatabricksPoc.Application.Search;
 using DatabricksPoc.Domain.Models;
 using DatabricksPoc.Domain.Repositories;
 using DatabricksPoc.Infrastructure.Context;
-using LinqToDB;
+using LinqToDB.Async;
 
 namespace DatabricksPoc.Application.Repositories;
 
@@ -49,6 +49,55 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
             .ToArrayAsync(ct);
 
         return ProductProjections.WithTags(dto, tags);
+    }
+
+    // Single SQL:
+    // SELECT p.*, c.name, c.slug, pt.tag
+    // FROM products p
+    // LEFT JOIN categories c ON p.category_id = c.category_id
+    // LEFT JOIN product_tags pt ON p.product_id = pt.product_id
+    // WHERE p.product_id = @productId
+    public async Task<ProductDetailDto?> GetByIdSingleQueryAsync(long productId, CancellationToken ct = default)
+    {
+        var rows = await db.Products
+            .Where(p => p.ProductId == productId)
+            .SelectMany(
+                p => db.ProductTags.Where(t => t.ProductId == p.ProductId).DefaultIfEmpty(),
+                (p, t) => new
+                {
+                    p.ProductId,
+                    p.Sku,
+                    p.Name,
+                    p.Description,
+                    p.Price,
+                    p.Stock,
+                    p.IsActive,
+                    p.CreatedAt,
+                    p.UpdatedAt,
+                    CategoryName = p.Category.Name,
+                    CategorySlug = p.Category.Slug,
+                    Tag = (string?)t.Tag
+                })
+            .ToListAsync(ct);
+
+        if (rows.Count == 0) return null;
+
+        var first = rows[0];
+        return new ProductDetailDto
+        {
+            ProductId = first.ProductId,
+            Sku = first.Sku,
+            Name = first.Name,
+            Description = first.Description,
+            Price = first.Price,
+            Stock = first.Stock,
+            IsActive = first.IsActive,
+            CreatedAt = first.CreatedAt,
+            UpdatedAt = first.UpdatedAt,
+            CategoryName = first.CategoryName,
+            CategorySlug = first.CategorySlug,
+            Tags = rows.Where(r => r.Tag is not null).Select(r => r.Tag!).ToArray()
+        };
     }
 
     public async Task<ProductDetailDto?> GetBySkuAsync(string sku, CancellationToken ct = default)

@@ -10,18 +10,43 @@
     <UserSecretsId>54215cb0-961b-4746-ac5b-223c5e223f3d</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Exclude sub-projects that live inside the repo root folder.
+       All four item types must be excluded to prevent the SDK glob from pulling
+       bin/obj/content of the test project into the web project's build, which
+       causes MSB3030 recursive-path errors when dotnet build runs the solution. -->
+  <ItemGroup>
+    <Compile Remove="Databricks.Integration.Tests\**" />
+    <Content Remove="Databricks.Integration.Tests\**" />
+    <None Remove="Databricks.Integration.Tests\**" />
+    <EmbeddedResource Remove="Databricks.Integration.Tests\**" />
+    <Compile Remove="files\**" />
+    <Content Remove="files\**" />
+    <None Remove="files\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <!--
       linq2db core — ITable<T>, DataConnection, fluent mapping, LINQ translation.
       No EF Core packages needed. Linq2DB is a standalone LINQ-to-SQL library.
+
+      Migration notes:
+      - Upgraded from linq2db 5.4.1 to 6.1.0.
+      - ASP.NET integration package was renamed from "linq2db.AspNet" (5.4.1)
+        to "linq2db.Extensions" (6.1.0) as per the official linq2db guidance.
+      - The AddLinqToDBContext<T>() DI extension and logging hooks used by this
+        project are now provided by linq2db.Extensions and remain source-compatible
+        for our usage.
+      - After the upgrade, Databricks.Integration.Tests and manual smoke tests
+        (CRUD, basic queries, and SQL logging) were executed and passed without
+        requiring further code changes.
     -->
-    <PackageReference Include="linq2db"        Version="5.4.1" />
+    <PackageReference Include="linq2db" Version="6.1.0" />
+    <PackageReference Include="linq2db.Extensions" Version="6.1.0" />
 
     <!--
       ASP.NET Core integration — AddLinqToDBContext<T>() DI extension
       and UseDefaultLogging() for SQL tracing via ILogger.
     -->
-    <PackageReference Include="linq2db.AspNet" Version="5.4.1" />
 
     <!--
       System.Data.Odbc — physical ODBC transport.
