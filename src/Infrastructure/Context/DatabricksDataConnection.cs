@@ -78,8 +78,12 @@ public sealed class DatabricksIdentifierInterceptor : CommandInterceptor
     private static string FixQuoting(string sql)
         => System.Text.RegularExpressions.Regex.Replace(
             sql,
-            "\"([^\"]+)\"",
-            m => $"`{m.Groups[1].Value}`");
+            "\"((?:[^\"]|\"\")+?)\"",
+            m =>
+            {
+                var identifier = m.Groups[1].Value.Replace("\"\"", "\"");
+                return $"`{identifier}`";
+            });
 
     public override DbCommand CommandInitialized(
         CommandEventData eventData, DbCommand command)
