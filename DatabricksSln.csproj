@@ -28,6 +28,17 @@
     <!--
       linq2db core — ITable<T>, DataConnection, fluent mapping, LINQ translation.
       No EF Core packages needed. Linq2DB is a standalone LINQ-to-SQL library.
+
+      Migration notes:
+      - Upgraded from linq2db 5.4.1 to 6.1.0.
+      - ASP.NET integration package was renamed from "linq2db.AspNet" (5.4.1)
+        to "linq2db.Extensions" (6.1.0) as per the official linq2db guidance.
+      - The AddLinqToDBContext<T>() DI extension and logging hooks used by this
+        project are now provided by linq2db.Extensions and remain source-compatible
+        for our usage.
+      - After the upgrade, Databricks.Integration.Tests and manual smoke tests
+        (CRUD, basic queries, and SQL logging) were executed and passed without
+        requiring further code changes.
     -->
     <PackageReference Include="linq2db" Version="6.1.0" />
     <PackageReference Include="linq2db.Extensions" Version="6.1.0" />
