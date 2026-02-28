@@ -1,4 +1,4 @@
-using DatabricksPoc.Application.Projections;
+﻿using DatabricksPoc.Application.Projections;
 using DatabricksPoc.Application.Search;
 using DatabricksPoc.Domain.Models;
 using DatabricksPoc.Domain.Repositories;
@@ -10,7 +10,7 @@ namespace DatabricksPoc.Application.Repositories;
 /// <summary>
 /// ProductRepository backed by Linq2DB.
 ///
-/// ITable&lt;T&gt; is IQueryable&lt;T&gt; — the query patterns are identical to EF Core:
+/// ITable&lt;T&gt; is IQueryable&lt;T&gt;  the query patterns are identical to EF Core:
 ///   .Where().Select().OrderBy().Skip().Take().ToListAsync()
 ///
 /// Key differences from EF Core:
@@ -18,12 +18,12 @@ namespace DatabricksPoc.Application.Repositories;
 ///     translator expands expression variables inline. LINQKit not needed.
 ///   - Tags: same two-query pattern. Collection sub-selects inside projections
 ///     are a SQL limitation, not a Linq2DB limitation.
-///   - No .Include() — Linq2DB generates JOINs from Association mappings
+///   - No .Include()  Linq2DB generates JOINs from Association mappings
 ///     when projections reference navigation properties directly.
 /// </summary>
 public class ProductRepository(DatabricksDataConnection db) : IProductRepository
 {
-    // ─────────────────────────────────────────────────────────────────────────
+    // 
     // Detail reads
     //
     // Phase 1: project scalar fields + category join server-side
@@ -32,11 +32,10 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
     //
     // Linq2DB generates the Category LEFT JOIN from the Association mapping
     // when the projection references p.Category.Name directly.
-    // ─────────────────────────────────────────────────────────────────────────
+    // 
 
     public async Task<ProductDetailDto?> GetByIdAsync(long productId, CancellationToken ct = default)
     {
-        var tt = await db.Products.FirstOrDefaultAsync(ct);
         var dto = await db.Products
             .Where(p => p.ProductId == productId)
             .Select(ProductProjections.ToDetail)
@@ -141,34 +140,34 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
             .ToList();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Search — uses ToSummary expression projection (no Tags, translates cleanly)
+    // 
+    // Search  uses ToSummary expression projection (no Tags, translates cleanly)
     //
     // Round trips: SearchAsync issues 2 SQL statements per call:
-    //   1. COUNT(*) — total matching rows for pagination metadata
-    //   2. SELECT ... LIMIT/OFFSET — the actual page of results
+    //   1. COUNT(*)  total matching rows for pagination metadata
+    //   2. SELECT ... LIMIT/OFFSET  the actual page of results
     //
     // Both share the exact same IQueryable<ProductSummaryDto> so the WHERE,
-    // JOIN, and ORDER BY are identical — only the terminal operator differs.
+    // JOIN, and ORDER BY are identical  only the terminal operator differs.
     //
     // If double round-trip latency becomes a concern at scale, the only
     // LINQ-safe alternative is to drop the TotalCount from the response and
     // use cursor-based pagination instead (HasNextPage via Take(pageSize+1)).
     // Window function approaches (COUNT(*) OVER()) require raw SQL.
-    // ─────────────────────────────────────────────────────────────────────────
+    // 
 
     public async Task<PagedResult<ProductSummaryDto>> SearchAsync(
         ProductSearchRequest request, CancellationToken ct = default)
     {
-        // Build the full query once — nothing hits the DB here.
-        // ToSummary is an Expression<> so EF Core generates a narrow SELECT
+        // Build the full query once  nothing hits the DB here.
+        // ToSummary is an Expression<> so Linq2DB generates a narrow SELECT
         // (no SELECT *, no Tags join).
         IQueryable<ProductSummaryDto> query = db.Products
             .Where(ProductSpecificationBuilder.Build(request)!)
             .ApplySort(request.SortBy)
             .Select(ProductProjections.ToSummary);
 
-        // Round trip 1: COUNT — same WHERE clause, no ORDER BY, no LIMIT
+        // Round trip 1: COUNT  same WHERE clause, no ORDER BY, no LIMIT
         int totalCount = await query.CountAsync(ct);
 
         // Round trip 2: paged data
@@ -186,9 +185,9 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
         };
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // 
     // Aggregations
-    // ─────────────────────────────────────────────────────────────────────────
+    // 
 
     public async Task<Dictionary<string, int>> GetStockByCategoryAsync(CancellationToken ct = default)
     {
@@ -208,4 +207,3 @@ public class ProductRepository(DatabricksDataConnection db) : IProductRepository
     public async Task<bool> ExistsAsync(string sku, CancellationToken ct = default)
         => await db.Products.AnyAsync(p => p.Sku == sku, ct);
 }
-

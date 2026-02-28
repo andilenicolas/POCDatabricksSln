@@ -3,6 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatabricksPoc.Domain.Entities;
 
+public class ItemModel
+{
+    public string Name { get; set; } = default!;
+    public string Id { get; set; } = default!;
+}
+
 /// <summary>
 /// Maps to: catalog.commerce.products (Unity Catalog 3-part naming)
 /// Delta table — no EF migrations, schema managed in Databricks.
@@ -41,6 +47,9 @@ public class Product
 
   [Column("category_id")]
   public long CategoryId { get; set; }
+
+  [Column("items")]
+  public List<ItemModel> Items { get; set; } = new();
 
   // Navigation properties — excluded from column mapping in both EF Core and LinqToDB
   [NotMapped]
